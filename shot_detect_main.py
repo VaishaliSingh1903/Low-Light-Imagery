@@ -110,7 +110,7 @@ class Frame:
     
 
 
-if __name__ == "__main__":
+def main():
     videopath = ""
     cap = cv2.VideoCapture(str(videopath))
     curr_frame = None
@@ -149,6 +149,95 @@ if __name__ == "__main__":
 
     start = np.array(start_id_spot)[np.newaxis, :]
     end = np.array(end_id_spot)[np.newaxis, :]
-    spot = np.concatenate((start.T, end.T), axis=1)
-    np.savetxt('./result.txt', spot, fmt='%d', delimiter='\t')
+    return start,end
+#     spot = np.concatenate((start.T, end.T), axis=1)
+#     np.savetxt('./result.txt', spot, fmt='%d', delimiter='\t')
+
+
+ def optimize_frame(self, tag_frames, list_frames):
+     '''
+         optimize the possible frame
+     '''
+     new_tag_frames = []
+     frame_count = 10
+     diff_threshold = 10
+     diff_optimize = 2
+     start_id_spot = []
+     start_id_spot.append(0)
+     end_id_spot = []
+
+     for tag_frame in tag_frames:
+
+         tag_id = tag_frame.id
+
+         """
+
+         check whether the difference of the possible frame is no less than 10.
+
+         """
+         if tag_frame.diff < diff_threshold:
+             continue
+         """
+
+         check whether the difference is more than twice the average difference of 
+         the previous 10 frames and the subsequent 10 frames.
+
+         """
+         #get the previous 10 frames
+         pre_start_id = tag_id - frame_count
+         pre_end_id = tag_id - 1
+         if pre_start_id < 0:
+             continue
+
+         pre_sum_diff = 0
+         check_id = pre_start_id
+         while True:
+             pre_frame_info = list_frames[check_id]
+             pre_sum_diff += pre_frame_info.diff
+             check_id += 1
+             if check_id > pre_end_id:
+                 break
+
+         #get the subsequent 10 frames
+         back_start_id = tag_id + 1
+         back_end_id = tag_id + frame_count
+         if back_end_id >= len(list_frames):
+             continue
+
+         back_sum_diff = 0
+         check_id = back_start_id
+         while True:
+             back_frame_info = list_frames[check_id]
+             back_sum_diff += back_frame_info.diff
+             check_id += 1
+             if check_id > back_end_id:
+                 break
+
+         # calculate the difference of the previous 10 frames and the subsequent 10 frames
+         sum_diff = pre_sum_diff + back_sum_diff
+         average_diff = sum_diff / (frame_count * 2)
+
+         #check whether the requirement is met or not
+         if tag_frame.diff > (diff_optimize * average_diff):
+             new_tag_frames.append(tag_frame)
+
+     """
+     get the index of the first and last frame of a shot
+     """
+
+     for i in range(0,len(new_tag_frames)):
+         start_id_spot.append(new_tag_frames[i].id)
+         end_id_spot.append(new_tag_frames[i].id - 1)
+
+
+     last_frame = list_frames[-1]
+     if new_tag_frames[-1].id < last_frame.id:
+         new_tag_frames.append(last_frame)
+
+     end_id_spot.append(new_tag_frames[-1].id)
+
+
+     return new_tag_frames, start_id_spot, end_id_spot
+
+
 
