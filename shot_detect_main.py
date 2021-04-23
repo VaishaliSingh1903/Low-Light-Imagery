@@ -111,7 +111,7 @@ class Frame:
 
 
 def main():
-    videopath = ""
+    videopath = "dataset.mp4"
     cap = cv2.VideoCapture(str(videopath))
     curr_frame = None
     prev_frame = None
@@ -240,4 +240,4 @@ def main():
      return new_tag_frames, start_id_spot, end_id_spot
 
 
-
+start_frm,end_frm=main()
