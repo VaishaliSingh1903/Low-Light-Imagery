@@ -360,15 +360,15 @@ def get_expose_corrected(img, gamma=0.6, balance_param=0.15):
     illum_map_corrected = np.clip(illum_map_corrected, 1e-3, 1)**gamma
     illum_map_corrected = np.dstack(( illum_map_corrected, illum_map_corrected, illum_map_corrected ))
     img_corrected = img / illum_map_corrected
-    return img_corrected
+    return img_corrected, illum_map_corrected
 
 
 
 def correct_exposure(im, gamma=0.6, balance_param=0.15, wc=1, ws=1, we=1):
     im = (im/255.0).astype(np.float32)
     inv_im = 1 - im
-    inv_corrected = get_expose_corrected(inv_im, gamma, balance_param)
-    im_corrected = get_expose_corrected(im, gamma, balance_param)
+    inv_corrected, inv_illum_map = get_expose_corrected(inv_im, gamma, balance_param)
+    im_corrected, illum_map = get_expose_corrected(im, gamma, balance_param)
 
     # out_img = merge_mertens(im, im_corrected, inv_corrected)
     
@@ -380,44 +380,60 @@ def correct_exposure(im, gamma=0.6, balance_param=0.15, wc=1, ws=1, we=1):
     out_img = mm.process([im, im_corrected, inv_corrected])
 
     out_img = np.clip(out_img*255, 0, 255).astype("uint8")
-    return im, im_corrected, inv_corrected, out_img
+    return illum_map, inv_illum_map, out_img
+
+def correct_illum_exposure(im, illum_map, inv_illum_map, wc=1, ws=1, we=1):
+    im = (im/255.0).astype(np.float32)
+    inv_im = 1 - im
+    inv_corrected = inv_im / inv_illum_map
+    im_corrected = im / illum_map
+
+    im_corrected = np.clip(im_corrected*255, 0, 255).astype("uint8")
+    inv_corrected = np.clip(inv_corrected*255, 0, 255).astype("uint8")
+    im = np.clip(im*255, 0, 255).astype("uint8")
+
+    mm = cv2.createMergeMertens(wc, ws, we)
+    out_img = mm.process([im, im_corrected, inv_corrected])
+
+    out_img = np.clip(out_img*255, 0, 255).astype("uint8")
+    return out_img
 
 
+###################################################################################################
+# sh_time = 2
+# # im = imageio.imread('images/original.bmp')
+# # im = imageio.imread('imageio:chelsea.png')
+# # im = imageio.imread('images/person_exdark.jpg')
 
-sh_time = 2
-# im = imageio.imread('images/original.bmp')
-# im = imageio.imread('imageio:chelsea.png')
-# im = imageio.imread('images/person_exdark.jpg')
+# filename = 'toy_LOL.png'
+# out_folder = 'output_image'
+# im = imageio.imread(f'images/{filename}')
 
-filename = 'toy_LOL.png'
-out_folder = 'output_image'
-im = imageio.imread(f'images/{filename}')
+# # im = imageio.imread('images/toy_LOL.png')
+# img, img_cr, img_inv_cr, img_out = correct_exposure(im)
 
-# im = imageio.imread('images/toy_LOL.png')
-img, img_cr, img_inv_cr, img_out = correct_exposure(im)
+# plt.imshow(img)
+# plt.title('Original image')
+# plt.show(block=False)
+# plt.pause(sh_time)
+# plt.close()
+# imageio.imwrite(f'{out_folder}/{filename}', img)
 
-plt.imshow(img)
-plt.title('Original image')
-plt.show(block=False)
-plt.pause(sh_time)
-plt.close()
-imageio.imwrite(f'{out_folder}/{filename}', img)
+# plt.imshow(img_cr)
+# plt.title('Image Corrected')
+# plt.show(block=False)
+# plt.pause(sh_time)
+# plt.close()
+# imageio.imwrite(f'{out_folder}/corrected_{filename}', img_cr)
 
-plt.imshow(img_cr)
-plt.title('Image Corrected')
-plt.show(block=False)
-plt.pause(sh_time)
-plt.close()
-imageio.imwrite(f'{out_folder}/corrected_{filename}', img_cr)
+# plt.imshow(img_inv_cr)
+# plt.title('Image Inverted Corrected')
+# plt.show(block=False)
+# plt.pause(sh_time)
+# plt.close()
+# imageio.imwrite(f'{out_folder}/inv_corrected_{filename}', img_inv_cr)
 
-plt.imshow(img_inv_cr)
-plt.title('Image Inverted Corrected')
-plt.show(block=False)
-plt.pause(sh_time)
-plt.close()
-imageio.imwrite(f'{out_folder}/inv_corrected_{filename}', img_inv_cr)
-
-plt.imshow(img_out)
-plt.title('Corrected Output')
-plt.show()
-imageio.imwrite(f'{out_folder}/final_{filename}', img_out)
+# plt.imshow(img_out)
+# plt.title('Corrected Output')
+# plt.show()
+# imageio.imwrite(f'{out_folder}/final_{filename}', img_out)
